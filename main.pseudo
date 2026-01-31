@@ -4,27 +4,47 @@ BEGINMAIN
       Request = Get HTTP Request
       User = GetUser(Request.cookies)
       CASEWHERE Request.Path
-        matches("/"): Response = HomePage(Request)
-        matches("/dashboard"): Response = DashboardPage(User, Request)
-        matches("/admin"): Response = AdminPage(User, Request)
-        matches("/leaderboard"): Response = LeaderboardPage(User, Request)
-        matches("/sessions"): Response = SessionsPage(User, Request)
-        matches("/sessions/polls"): Response = SessionPollsPage(User, Request)
-        matches("/sessions/polls/<poll_id>"): Response = SessionPollVotingPage(User, Request)
-        matches("/sessions/polls/new"): Response = SessionPollCreationPage(User, Request)
-        matches("/sessions/new"): Response = NewPeerSessionPage(User, Request)
-        matches("/sessions/requests"): Response = PeerSessionRequestsPage(User, Request)
-        matches("/sessions/<session_id>"): Response = SessionDetailsPage(User, Request)
-        matches("/sessions/<session_id>/feedback"): Response = SessionFeedbackPage(User, Request)
-        matches("/questions"): Response = QuestionsPage(User, Request)
-        matches("/questions/new"): Response = NewQuestionsPage(User, Request)
-        matches("/questions/<question_id>"): Response = QuestionDetailsPage(User, Request)
-        matches("/resources"): Response = ResourcesPage(User, Request)
-        matches("/resources/new"): Response = NewResourcesPage(User, Request)
-        matches("/resources/<resource_id>"): Response = ResourceDetailsPage(User, Request)
-        matches("/topics/<subject_id>"): Response = TopicsPage(User, Request)
-        matches("/topics/<subject_id>/<topic_id>"): Response = TopicsVotingPage(User, Request)
+        matches("/"): Response = HomeController(Request)
+        matches("/dashboard"): Response = DashboardController(User, Request)
+        matches("/admin"): Response = AdminController(User, Request)
+        matches("/leaderboard/<cohort_year>"): Response = LeaderboardController(User, Request)
+        matches("/sessions"): Response = SessionsController(User, Request)
+        matches("/sessions/polls"): Response = SessionPollsController(User, Request)
+        matches("/sessions/polls/<poll_id>"): Response = SessionPollVotingController(User, Request)
+        matches("/sessions/polls/new"): Response = SessionPollCreationController(User, Request)
+        matches("/sessions/new"): Response = NewPeerSessionController(User, Request)
+        matches("/sessions/requests"): Response = PeerSessionRequestsController(User, Request)
+        matches("/sessions/<session_id>"): Response = SessionDetailsController(User, Request)
+        matches("/sessions/<session_id>/feedback"): Response = SessionFeedbackController(User, Request)
+        matches("/questions"): Response = QuestionsController(User, Request)
+        matches("/questions/new"): Response = NewQuestionsController(User, Request)
+        matches("/questions/<question_id>"): Response = QuestionDetailsController(User, Request)
+        matches("/resources"): Response = ResourcesController(User, Request)
+        matches("/resources/new"): Response = NewResourcesController(User, Request)
+        matches("/resources/<resource_id>"): Response = ResourceDetailsController(User, Request)
+        matches("/topics/<subject_id>"): Response = TopicsController(User, Request)
+        matches("/topics/<subject_id>/<topic_id>"): Response = TopicsVotingController(User, Request)
       END CASE
       Send Response to client
    ENDWHILE
 ENDMAIN
+
+BEGIN GetUser(cookies)
+    AccessToken = cookies.get("access_token")
+    RefreshToken = cookies.get("refresh_token")
+    IdToken = cookies.get("id_token")
+
+    IF AccessToken = Null THEN
+        RefreshAllTokens(AccessToken, RefreshToken, IdToken)
+    ENDIF
+
+    IF IdToken != Null THEN
+        TokenValid = VerifyToken(IdToken)
+        IF TokenValid THEN
+            Claims = GetUserClaims(IdToken)
+            RETURN CreateUserRecord(Claims.id, Claims.name, Claims.email)
+        ENDIF
+    ENDIF
+
+    RETURN null
+END GetUser
