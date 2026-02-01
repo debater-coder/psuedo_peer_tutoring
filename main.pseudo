@@ -4,26 +4,28 @@ BEGINMAIN
       Request = Get HTTP Request
       User = GetUser(Request.cookies)
       CASEWHERE Request.Path
-        matches("/"): Response = HomeController(Request)
-        matches("/dashboard"): Response = DashboardController(User, Request)
-        matches("/admin"): Response = AdminController(User, Request)
-        matches("/leaderboard/<cohort_year>"): Response = LeaderboardController(User, Request)
-        matches("/sessions"): Response = SessionsController(User, Request)
-        matches("/sessions/polls"): Response = SessionPollsController(User, Request)
-        matches("/sessions/polls/<poll_id>"): Response = SessionPollVotingController(User, Request)
-        matches("/sessions/polls/new"): Response = SessionPollCreationController(User, Request)
-        matches("/sessions/new"): Response = NewPeerSessionController(User, Request)
-        matches("/sessions/requests"): Response = PeerSessionRequestsController(User, Request)
-        matches("/sessions/<session_id>"): Response = SessionDetailsController(User, Request)
-        matches("/sessions/<session_id>/feedback"): Response = SessionFeedbackController(User, Request)
-        matches("/questions"): Response = QuestionsController(User, Request)
-        matches("/questions/new"): Response = NewQuestionsController(User, Request)
-        matches("/questions/<question_id>"): Response = QuestionDetailsController(User, Request)
-        matches("/resources"): Response = ResourcesController(User, Request)
-        matches("/resources/new"): Response = NewResourcesController(User, Request)
-        matches("/resources/<resource_id>"): Response = ResourceDetailsController(User, Request)
-        matches("/topics/<subject_id>"): Response = TopicsController(User, Request)
-        matches("/topics/<subject_id>/<topic_id>"): Response = TopicsVotingController(User, Request)
+        matches("/"): Response = HomePage(db, Request)
+        matches("/dashboard"): Response = DashboardPage(db, User, Request)
+        matches("/admin"): Response = AdminPage(db, User, Request)
+        matches("/leaderboard/<cohort_year>"): Response = LeaderboardPage(db, User, Request)
+        matches("/sessions"): Response = SessionsPage(db, User, Request)
+        matches("/sessions/polls"): Response = SessionPollsPage(db, User, Request)
+        matches("/sessions/polls/<poll_id>"): Response = SessionPollVotingPage(db, User, Request)
+        matches("/sessions/polls/new"): Response = SessionPollCreationPage(db, User, Request)
+        matches("/sessions/new"): Response = NewPeerSessionPage(db, User, Request)
+        matches("/sessions/requests"): Response = PeerSessionRequestsPage(db, User, Request)
+        matches("/sessions/<session_id>"): Response = SessionDetailsPage(db, User, Request)
+        matches("/sessions/<session_id>/feedback"): Response = SessionFeedbackPage(db, User, Request)
+        matches("/questions"): Response = QuestionsPage(db, User, Request)
+        matches("/questions/new"): Response = NewQuestionsPage(db, User, Request)
+        matches("/questions/<question_id>"): Response = QuestionDetailsPage(db, User, Request)
+        matches("/resources"): Response = ResourcesPage(db, User, Request)
+        matches("/resources/new"): Response = NewResourcesPage(db, User, Request)
+        matches("/resources/<resource_id>"): Response = ResourceDetailsPage(db, User, Request)
+        matches("/topics/<subject_id>"): Response = TopicsPage(db, User, Request)
+        matches("/topics/<subject_id>/<topic_id>"): Response = TopicsVotingPage(db, User, Request)
+        matches("/topics/<subject_id>"): Response = TopicsPage(db, User, Request)
+        matches("/topics/<subject_id>/new"): Response = NewTopicPage(db, User, Request)
       END CASE
       Send Response to client
    ENDWHILE
@@ -48,3 +50,14 @@ BEGIN GetUser(cookies)
 
     RETURN null
 END GetUser
+
+BEGIN LeaderboardPage(db, User, Request)
+    CohortYear = GetPathParam(Request, "cohort_year")
+
+    IF User = NULL THEN
+        RETURN ErrorUnauthorisedResponse()
+    ENDIF
+
+    LeaderboardRows = Get rows from credits in (db), grouped by user_id, order by descending SUM(points), where cohort_year = (CohortYear)
+
+END LeaderboardPage
