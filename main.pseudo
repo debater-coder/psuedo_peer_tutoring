@@ -1,63 +1,128 @@
+logged_in = false
+User = Null
+
 BEGINMAIN
-   db = ConnectToDatabase()
-   WHILE server is running
-      Request = Get HTTP Request
-      User = GetUser(Request.cookies)
-      CASEWHERE Request.Path
-        matches("/"): Response = HomePage(db, Request)
-        matches("/dashboard"): Response = DashboardPage(db, User, Request)
-        matches("/admin"): Response = AdminPage(db, User, Request)
-        matches("/leaderboard/<cohort_year>"): Response = LeaderboardPage(db, User, Request)
-        matches("/sessions"): Response = SessionsPage(db, User, Request)
-        matches("/sessions/polls"): Response = SessionPollsPage(db, User, Request)
-        matches("/sessions/polls/<poll_id>"): Response = SessionPollVotingPage(db, User, Request)
-        matches("/sessions/polls/new"): Response = SessionPollCreationPage(db, User, Request)
-        matches("/sessions/new"): Response = NewPeerSessionPage(db, User, Request)
-        matches("/sessions/requests"): Response = PeerSessionRequestsPage(db, User, Request)
-        matches("/sessions/<session_id>"): Response = SessionDetailsPage(db, User, Request)
-        matches("/sessions/<session_id>/feedback"): Response = SessionFeedbackPage(db, User, Request)
-        matches("/questions"): Response = QuestionsPage(db, User, Request)
-        matches("/questions/new"): Response = NewQuestionsPage(db, User, Request)
-        matches("/questions/<question_id>"): Response = QuestionDetailsPage(db, User, Request)
-        matches("/resources"): Response = ResourcesPage(db, User, Request)
-        matches("/resources/new"): Response = NewResourcesPage(db, User, Request)
-        matches("/resources/<resource_id>"): Response = ResourceDetailsPage(db, User, Request)
-        matches("/topics/<subject_id>"): Response = TopicsPage(db, User, Request)
-        matches("/topics/<subject_id>/<topic_id>"): Response = TopicsVotingPage(db, User, Request)
-        matches("/topics/<subject_id>"): Response = TopicsPage(db, User, Request)
-        matches("/topics/<subject_id>/new"): Response = NewTopicPage(db, User, Request)
+   User = Login()
+   WHILE logged_in
+      Get user input
+      CASEWHERE user input
+        'admin'         : AdminPage()
+        'leaderboard'   : LeaderboardPage()
+        'sessions'      : SessionsPage()
+        'questions'     : QuestionsPage()
+        'resources'     : ResourcesPage()
+        'topics'        : TopicsPage()
+        'log out'       : logged_in = false
       END CASE
-      Send Response to client
    ENDWHILE
 ENDMAIN
 
-BEGIN GetUser(cookies)
-    AccessToken = cookies.get("access_token")
-    RefreshToken = cookies.get("refresh_token")
-    IdToken = cookies.get("id_token")
+BEGIN Login()
+    CsrfToken = GenerateRandomString()
 
-    IF AccessToken = Null THEN
-        RefreshAllTokens(AccessToken, RefreshToken, IdToken)
+    RedirectToSbhsPortal()
+
+    AuthCode = GetParamFromUrl('code')
+    CsrfState = GetParamFromUrl('state')
+
+    IF AuthCode <> CsrfState THEN
+        Display 'Failed to login'
+        logged_in = false
+        RETURN Null
     ENDIF
 
-    IF IdToken != Null THEN
+    Response = ExchangeAuthCodeForTokens()
+
+    AccessToken = GetFromResponse(Response, 'access_token')
+    RefreshToken = GetFromResponse(Response, 'refresh_token')
+    IdToken = GetFromResponse(Response, 'id_token')
+
+    IF AccessToken = Null THEN
+        logged_in = false
+        RETURN Null
+    ENDIF
+
+    IF IdToken <> Null THEN
         TokenValid = VerifyToken(IdToken)
         IF TokenValid THEN
             Claims = GetUserClaims(IdToken)
+            logged_in = true
             RETURN CreateUserRecord(Claims.id, Claims.name, Claims.email)
         ENDIF
     ENDIF
 
-    RETURN null
-END GetUser
+    RETURN Null
+END Login
 
 BEGIN LeaderboardPage(db, User, Request)
-    CohortYear = GetPathParam(Request, "cohort_year")
+    CohortYear = Get user input
 
-    IF User = NULL THEN
-        RETURN ErrorUnauthorisedResponse()
+    LeaderboardRecords = []
+
+    Open StudentDatabase
+    Open CreditsDatabase
+
+    FOR i = 0 to StudentDatabase.Length
+        StudentRecord = StudentDatabase[i]
+        CreditRecords = FilterByUserId(CreditsDatabase, StudentRecord.UserId) // This is implemented using an SQL WHERE clause
+
+        Points = 0
+        For j = 0 to CreditRecords.Length
+            Points = Points + CreditRecords[j].Points
+        NEXT j
+
+        LeaderboardRecord = Empty leaderboard record
+        LeaderboardRecord.Student = StudentRecord
+        LeaderboardRecord.Points = Points
+    NEXT i
+
+    MergeSortDescendingByPoints(LeaderboardRecord)
+
+    FOR i = 0 to 29
+        IF i < LeaderboardRecords.Length THEN
+            Record = LeaderboardRecords[i]
+            Display 'Place', i + 1
+            Display 'Name', Record.Student.Name
+            Display 'Points', Points
+        ENDIF
+    NEXT i
+
+    Close CreditsDatabase
+    Close StudentDatabase
+END LeaderboardPage
+
+BEGIN MergeSortDescendingByPoints(Records)
+    IF Records.length <= 1 THEN
+        RETURN Records
     ENDIF
 
-    LeaderboardRows = Get rows from credits in (db), grouped by user_id, order by descending SUM(points), where cohort_year = (CohortYear)
+    Middle = Records.length / 2
 
-END LeaderboardPage
+    Left = MergeSort(Records from index 0 to Middle)
+    Right = MergeSort(Records from index Middle + 1 to Records.length - 1)
+
+    RETURN MergeByPointsDescending(Left, Right)
+END MergeSortByPoints
+
+BEGIN MergeByPointsDescending(Left, Right)
+    MergedArray = []
+    WHILE Left is not empty AND RIGHT is not empty
+        IF Left.Length > 0 AND Right.Length > 0 THEN
+            IF Left[0].Points > Right[0].Points THEN
+                Append Left[0] to MergedArray
+                Remove Left[0]
+            ELSE
+                Append Right[0] to MergedArray
+                Remove Right[0]
+            ENDIF
+        ELSE IF Left.Length > 0 THEN
+                Append Left[0] to MergedArray
+                Remove Left[0]
+        ELSE IF Right.Length > 0 THEN
+                Append Right[0] to MergedArray
+                Remove Right[0]
+        ENDIF
+    ENDWHILE
+
+    RETURN MergedArray
+END MergeByPoints
