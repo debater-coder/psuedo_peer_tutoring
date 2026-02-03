@@ -78,6 +78,9 @@ BEGIN LeaderboardPage(db, User, Request)
 
     MergeSortDescendingByPoints(LeaderboardRecord)
 
+    Close CreditsDatabase
+    Close StudentDatabase
+
     FOR i = 0 to 29
         IF i < LeaderboardRecords.Length THEN
             Record = LeaderboardRecords[i]
@@ -87,8 +90,6 @@ BEGIN LeaderboardPage(db, User, Request)
         ENDIF
     NEXT i
 
-    Close CreditsDatabase
-    Close StudentDatabase
 END LeaderboardPage
 
 BEGIN MergeSortDescendingByPoints(Records)
