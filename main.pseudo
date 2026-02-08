@@ -2,7 +2,10 @@ logged_in = false
 User = Null
 
 BEGINMAIN
-   User = Login()
+   WHILE logged_in = false
+    User = Login()
+   ENDWHILE
+
    WHILE logged_in
       Get user input
       CASEWHERE user input
@@ -43,7 +46,7 @@ BEGIN Login()
     ENDIF
 
     IF IdToken <> Null THEN
-        TokenValid = VerifyToken(IdToken)
+        TokenValid = VerifyToken(IdToken)       'Note that this uses digital signature algorithms (DSA) to verify the token rather than a database search
         IF TokenValid THEN
             Claims = GetUserClaims(IdToken)
             logged_in = true
@@ -54,7 +57,7 @@ BEGIN Login()
     RETURN Null
 END Login
 
-BEGIN LeaderboardPage(db, User, Request)
+BEGIN LeaderboardPage()
     CohortYear = Get user input
 
     LeaderboardRecords = []
@@ -64,7 +67,7 @@ BEGIN LeaderboardPage(db, User, Request)
 
     FOR i = 0 to StudentDatabase.Length
         StudentRecord = StudentDatabase[i]
-        CreditRecords = FilterByUserId(CreditsDatabase, StudentRecord.UserId) // This is implemented using an SQL WHERE clause
+        CreditRecords = FilterByUserId(CreditsDatabase, StudentRecord.UserId)       'This is implemented using an SQL WHERE clause
 
         Points = 0
         For j = 0 to CreditRecords.Length
@@ -89,7 +92,6 @@ BEGIN LeaderboardPage(db, User, Request)
             Display 'Points', Points
         ENDIF
     NEXT i
-
 END LeaderboardPage
 
 BEGIN MergeSortDescendingByPoints(Records)
@@ -127,3 +129,51 @@ BEGIN MergeByPointsDescending(Left, Right)
 
     RETURN MergedArray
 END MergeByPoints
+
+BEGIN QuestionsPage()
+    Get user input
+    CASEWHERE user input
+        'search_questions'  :  QuestionsSearch()
+        'new_question'      :  NewQuestion()
+        'edit_question'     :  EditQuestion()
+        'delete_question'   :  DeleteQuestion()
+        'upvote_question'   :  UpvoteQuestion()
+        'new_answer'        :  NewAnswer()
+        'edit_answer'       :  EditAnswer()
+        'delete_answer'     :  DeleteAnswer()
+        'upvote_answer'     :  UpvoteAnswer()
+    END CASE
+END QuestionsPage
+
+BEGIN SessionsPage()
+    Get user input
+
+    CASEWHERE user input
+        'search'             : SessionsSearch()
+        'group_polls'        : SessionsPoll()
+        'peer_tutoring'      : SessionsPeerTutoring()
+        'feedback'           : SessionsFeedback()
+    END CASE
+END SessionsPage
+
+BEGIN SessionsSearch()
+    Get user input
+    Open SessionsDatabase
+
+    Index = 0
+    WHILE Index < SessionsDatabase.Length
+        IF Contains(SessionsDatabase[Index].name, user input) OR
+           Contains(SessionsDatabase[Index].description, user input) THEN  'Note that the implementation will use a fuzzy search algorithm for more relevant search results
+            Display 'Name', SessionsDatabase[Index].name
+            Display 'Description', SessionsDatabase[Index].description
+            Display 'Subject', SessionsDatabase[Index].subject
+            Display 'Date', SessionsDatabase[Index].date
+            Display 'Time', SessionsDatabase[Index].time
+            Display 'Location', SessionsDatabase[Index].location
+            Display 'Host', SessionsDatabase[Index].host
+        ENDIF
+        Index = Index + 1
+    ENDWHILE
+
+    Close SessionsDatabase
+END SessionsSearch
