@@ -101,8 +101,8 @@ BEGIN MergeSortDescendingByPoints(Records)
 
     Middle = Records.length / 2
 
-    Left = MergeSort(Records from index 0 to Middle)
-    Right = MergeSort(Records from index Middle + 1 to Records.length - 1)
+    Left = MergeSortDescendingByPoints(Records from index 0 to Middle)
+    Right = MergeSortDescendingByPoints(Records from index Middle + 1 to Records.length - 1)
 
     RETURN MergeByPointsDescending(Left, Right)
 END MergeSortByPoints
@@ -128,7 +128,7 @@ BEGIN MergeByPointsDescending(Left, Right)
     ENDWHILE
 
     RETURN MergedArray
-END MergeByPoints
+END MergeByPointsDescending
 
 BEGIN QuestionsPage()
     Get user input
