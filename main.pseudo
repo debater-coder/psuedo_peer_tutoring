@@ -29,7 +29,6 @@ BEGIN Login()
     CsrfState = GetParamFromUrl('state')
 
     IF AuthCode <> CsrfState THEN
-        Display 'Failed to login'
         logged_in = false
         RETURN Null
     ENDIF
